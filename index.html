@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Login System</title>
+    <style>
+        :root {
+            --primary-color: #4a6cf7;
+            --danger-color: #f03e3e;
+            --success-color: #37b24d;
+            --dark-color: #222;
+            --light-color: #f8f9fa;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7ff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: var(--box-shadow);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .card-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .card-body {
+            padding: 30px 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: var(--dark-color);
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            transition: border 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            background-color: var(--primary-color);
+            color: white;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: #3951b9;
+        }
+
+        .btn-logout {
+            background-color: #6c757d;
+        }
+
+        .btn-logout:hover {
+            background-color: #5a6268;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert-danger {
+            background-color: #ffe3e3;
+            color: var(--danger-color);
+            border: 1px solid #ffc9c9;
+        }
+
+        .alert-success {
+            background-color: #d3f9d8;
+            color: var(--success-color);
+            border: 1px solid #b2f2bb;
+        }
+
+        .login-form {
+            display: block;
+        }
+
+        .welcome-message {
+            display: none;
+            text-align: center;
+        }
+
+        .welcome-message h3 {
+            margin-bottom: 20px;
+            color: var(--dark-color);
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 500px) {
+            .container {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card" id="loginCard">
+            <div class="card-header">
+                <h2>Secure Login</h2>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger" id="errorAlert"></div>
+                <div class="alert alert-success" id="successAlert"></div>
+                
+                <!-- Login Form -->
+                <form class="login-form" id="loginForm">
+                    <div class="form-group">
+                        <label for="username">Username or Email</label>
+                        <input type="text" id="username" name="username" placeholder="Enter your username or email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                    </div>
+                    <button type="submit" class="btn" id="loginButton">
+                        <span class="spinner" id="loginSpinner"></span>
+                        Log In
+                    </button>
+                </form>
+                
+                <!-- Welcome Message (shown after login) -->
+                <div class="welcome-message" id="welcomeMessage">
+                    <h3>Welcome, <span id="userDisplayName">User</span>!</h3>
+                    <p>You have successfully logged in.</p>
+                    <button class="btn btn-logout" id="logoutButton">
+                        <span class="spinner" id="logoutSpinner"></span>
+                        Log Out
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // API endpoints
+            const API = {
+                login: '/api/login',  // Replace with your actual endpoint
+                logout: '/api/logout' // Replace with your actual endpoint
+            };
+
+            // DOM Elements
+            const loginForm = document.getElementById('loginForm');
+            const welcomeMessage = document.getElementById('welcomeMessage');
+            const errorAlert = document.getElementById('errorAlert');
+            const successAlert = document.getElementById('successAlert');
+            const userDisplayName = document.getElementById('userDisplayName');
+            const loginButton = document.getElementById('loginButton');
+            const logoutButton = document.getElementById('logoutButton');
+            const loginSpinner = document.getElementById('loginSpinner');
+            const logoutSpinner = document.getElementById('logoutSpinner');
+            
+            // Check if user is already logged in (from localStorage or cookies)
+            checkAuthStatus();
+
+            // Login Form Submit Handler
+            loginForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                // Show loading state
+                setLoading(true, loginButton, loginSpinner);
+                
+                // Clear previous alerts
+                hideAlerts();
+                
+                // Get form data
+                const username = document.getElementById('username').value.trim();
+                const password = document.getElementById('password').value;
+                
+                // Basic client-side validation
+                if (!username || !password) {
+                    showError('Please enter both username and password');
+                    setLoading(false, loginButton, loginSpinner);
+                    return;
+                }
+                
+                try {
+                    // Call login API
+                    const response = await fetch(API.login, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ username, password }),
+                        credentials: 'include' // Include cookies in the request
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(data.message || 'Login failed');
+                    }
+                    
+                    // Handle successful login
+                    handleLoginSuccess(data);
+                    
+                } catch (error) {
+                    // Handle errors
+                    showError(error.message || 'Failed to connect to the server');
+                } finally {
+                    setLoading(false, loginButton, loginSpinner);
+                }
+            });
+            
+            // Logout Button Handler
+            logoutButton.addEventListener('click', async function() {
+                setLoading(true, logoutButton, logoutSpinner);
+                hideAlerts();
+                
+                try {
+                    const response = await fetch(API.logout, {
+                        method: 'POST',
+                        credentials: 'include' // Include cookies in the request
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(data.message || 'Logout failed');
+                    }
+                    
+                    // Handle successful logout
+                    handleLogoutSuccess();
+                    
+                } catch (error) {
+                    showError(error.message || 'Failed to connect to the server');
+                } finally {
+                    setLoading(false, logoutButton, logoutSpinner);
+                }
+            });
+            
+            // Helper Functions
+            
+            function checkAuthStatus() {
+                // Check if there's an auth token or session indicator
+                const token = localStorage.getItem('authToken');
+                
+                if (token) {
+                    // Validate token with the server if needed
+                    // For now, just assume it's valid
+                    const username = localStorage.getItem('username') || 'User';
+                    showWelcomeScreen(username);
+                }
+            }
+            
+            function handleLoginSuccess(data) {
+                // Store auth data
+                if (data.token) {
+                    localStorage.setItem('authToken', data.token);
+                }
+                
+                const username = data.username || data.user?.username || 'User';
+                localStorage.setItem('username', username);
+                
+                // Show welcome screen
+                showWelcomeScreen(username);
+                
+                // Show success message
+                showSuccess('Login successful!');
+            }
+            
+            function handleLogoutSuccess() {
+                // Clear auth data
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('username');
+                
+                // Show login form
+                showLoginForm();
+                
+                // Show success message
+                showSuccess('You have been logged out successfully');
+            }
+            
+            function showWelcomeScreen(username) {
+                loginForm.style.display = 'none';
+                welcomeMessage.style.display = 'block';
+                userDisplayName.textContent = username;
+            }
+            
+            function showLoginForm() {
+                welcomeMessage.style.display = 'none';
+                loginForm.style.display = 'block';
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+            }
+            
+            function showError(message) {
+                errorAlert.textContent = message;
+                errorAlert.style.display = 'block';
+                successAlert.style.display = 'none';
+            }
+            
+            function showSuccess(message) {
+                successAlert.textContent = message;
+                successAlert.style.display = 'block';
+                errorAlert.style.display = 'none';
+            }
+            
+            function hideAlerts() {
+                errorAlert.style.display = 'none';
+                successAlert.style.display = 'none';
+            }
+            
+            function setLoading(isLoading, button, spinner) {
+                if (isLoading) {
+                    button.disabled = true;
+                    spinner.style.display = 'inline-block';
+                } else {
+                    button.disabled = false;
+                    spinner.style.display = 'none';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
